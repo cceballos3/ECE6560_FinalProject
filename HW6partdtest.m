@@ -1,0 +1,83 @@
+%% ECE 6560: 2D Radar Clutter Suppression via Variational PDE
+% Author: Carlos Ceballos
+% Description: Implementation of Gradient Descent for L2 Tikhonov Regularization
+
+clear; clc; close all;
+
+%% 1. Parameters & Synthetic Data Generation
+N = 100;                % Grid size (NxN)
+h = 1;                  % Spatial step
+dt = 0.1;               % Time step (Must be <= h^2/4 for stability)
+num_iter = 150;         % Number of iterations
+lambda_base = 0.15;     % Background fidelity (Smoothing dominant)
+gamma = 5.0;            % Gradient scaling for variable fidelity
+
+% Create a synthetic target (Gaussian Blob)
+[X, Y] = meshgrid(1:N, 1:N);
+target = exp(-((X-N/2).^2 + (Y-N/2).^2) / 20);
+
+% Add Clutter (Gaussian Noise)
+u0 = target + 0.2 * randn(N, N);
+u_fixed = u0;           % For Experiment 1%
+u_var = u0;             % For Experiment 2
+
+%% 2. Experiment 2: Pre-compute Variable Fidelity Map lambda(x,y)
+% We increase lambda where the initial gradient is high to "anchor" targets
+[gx, gy] = gradient(u0);
+grad_mag = sqrt(gx.^2 + gy.^2);
+lambda_map = lambda_base + gamma * (grad_mag / max(grad_mag(:)));
+
+%% 3. Numerical Evolution (Gradient Descent)
+energy_fixed = zeros(num_iter, 1);
+
+for n = 1:num_iter
+    % --- Experiment 1: Fixed Fidelity ---
+    % 5-point stencil Laplacian (Central Differences)
+    Laplacian_f = del2(u_fixed) * 4; 
+    
+    % Update Step: u_next = u_curr + dt * (Laplacian - lambda*(u - u0))
+    u_fixed = u_fixed + dt * (Laplacian_f - lambda_base * (u_fixed - u0));
+    
+    % --- Experiment 2: Variable Fidelity ---
+    Laplacian_v = del2(u_var) * 4;
+    u_var = u_var + dt * (Laplacian_v - lambda_map .* (u_var - u0));
+    
+    % Track Energy Functional for Exp 1 (Math Validation)
+    [ux, uy] = gradient(u_fixed);
+    reg_term = 0.5 * sum(ux(:).^2 + uy(:).^2);
+    fid_term = 0.5 * lambda_base * sum((u_fixed(:) - u0(:)).^2);
+    energy_fixed(n) = reg_term + fid_term;
+end
+
+%% 4. Visualization
+% FIGURE 1: Vertical arrangement (3x1) for better report fit
+figure('Position', [100, 100, 500, 900]);
+
+subplot(3,1,1);
+imagesc(u0); colormap jet; axis image;
+title('Noisy Radar Map (u_0)');
+colorbar;
+
+subplot(3,1,2);
+imagesc(u_fixed); colormap jet; axis image;
+title(['Fixed \lambda = ', num2str(lambda_base)]);
+ylabel('Blurring Observed');
+colorbar;
+
+subplot(3,1,3);
+imagesc(u_var); colormap jet; axis image;
+title('Adaptive Variable \lambda(x,y)');
+ylabel('Target Anchored');
+colorbar;
+
+% FIGURE 2: Energy convergence (unchanged)
+figure;
+plot(1:num_iter, energy_fixed, 'LineWidth', 2);
+grid on;
+title('Energy Functional Minimization E(u)');
+xlabel('Iterations'); ylabel('Total Energy');
+
+% FIGURE 3: 3D Surface comparison (unchanged)
+figure;
+subplot(1,2,1); surf(u0); shading interp; title('Noisy Surface');
+subplot(1,2,2); surf(u_var); shading interp; title('Denoised Surface');

@@ -51,5 +51,4 @@ for t = 1:iterations
         drawnow; % Forces MATLAB to update the figure
     end
 end
-
 fprintf('PDE Evolution Complete.\n');

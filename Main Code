@@ -1,7 +1,6 @@
 %% ECE 6560: 2D Radar Clutter Suppression via Variational PDE
 % Author: Carlos Ceballos
 % Description: Implementation of Gradient Descent 
-
 clear; clc; close all;
 
 %% 1. Parameters & Synthetic Data Generation

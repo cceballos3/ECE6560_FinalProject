@@ -25,7 +25,7 @@ iterations = 100;%
 
 figure('Color', 'w', 'Position', [100, 100, 950, 400]);
 
-%% 4. The Loop (This is the core "Doing something" part)
+%% 4. The Loop (This is the core "doing something" part)
 for t = 1:iterations
     % Standard Laplacian
     [ux, uy] = gradient(u);
